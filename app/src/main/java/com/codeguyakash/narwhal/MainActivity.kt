@@ -97,7 +97,8 @@ class MainActivity : AppCompatActivity() {
 
         // Write to file
         try {
-            val logFile = File(logFolder, "nfc_logs.txt")
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val logFile = File(logFolder, "nfc_logs_$timestamp.txt")
             FileWriter(logFile, true).use { it.append(line) }
         } catch (e: Exception) {
             e.printStackTrace()
