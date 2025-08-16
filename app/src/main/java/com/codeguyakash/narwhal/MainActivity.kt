@@ -5,10 +5,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.view.View
-import android.widget.Button
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -44,7 +42,15 @@ class MainActivity : AppCompatActivity() {
 
         // Select save folder based on Android version
         logFolder = getLogFolder()
-        if (!logFolder.exists()) logFolder.mkdirs()
+        if (!logFolder.exists()) {
+            if (logFolder.mkdirs()) {
+                saveLog("✅ Log folder created: ${logFolder.absolutePath}")
+            } else {
+                saveLog("❌ Failed to create log folder: ${logFolder.absolutePath}")
+            }
+        } else {
+            saveLog("ℹ️ Log folder already exists: ${logFolder.absolutePath}")
+        }
 
         // Ask runtime permissions if needed
         if (!PermissionHelper.hasAllPermissions(this)) {
@@ -55,27 +61,31 @@ class MainActivity : AppCompatActivity() {
         nfcReader = NFCReader(this) { msg -> saveLog(msg) }
         nfcReader.initNFC()
 
-        // Button: start scanning
-        findViewById<Button>(R.id.myButton).setOnClickListener {
-            saveLog("Scanning for NFC tags...")
-            Toast.makeText(this, "Scanning for NFC tags...", Toast.LENGTH_SHORT).show()
-            nfcReader.enableForegroundDispatch()
-        }
+        // 🔴 Button removed → scanning always ON when app is foreground
+        saveLog("App started, ready to scan NFC tags...")
     }
 
     override fun onResume() {
         super.onResume()
-        if (::nfcReader.isInitialized) nfcReader.enableForegroundDispatch()
+        if (::nfcReader.isInitialized) {
+            nfcReader.enableForegroundDispatch()
+            saveLog("NFC foreground dispatch enabled")
+        }
     }
 
     override fun onPause() {
         super.onPause()
-        if (::nfcReader.isInitialized) nfcReader.disableForegroundDispatch()
+        if (::nfcReader.isInitialized) {
+            nfcReader.disableForegroundDispatch()
+            saveLog("NFC foreground dispatch disabled")
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (::nfcReader.isInitialized) nfcReader.processIntent(intent)
+        if (::nfcReader.isInitialized) {
+            nfcReader.processIntent(intent)
+        }
     }
 
     /** Get log folder depending on Android version */
@@ -95,10 +105,12 @@ class MainActivity : AppCompatActivity() {
         val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
         val line = "$time - $message\n"
 
+        // File name with date+time
+        val fileName = "nfc_logs_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.txt"
+
         // Write to file
         try {
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val logFile = File(logFolder, "nfc_logs_$timestamp.txt")
+            val logFile = File(logFolder, fileName)
             FileWriter(logFile, true).use { it.append(line) }
         } catch (e: Exception) {
             e.printStackTrace()
